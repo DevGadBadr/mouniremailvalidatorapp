@@ -2,10 +2,13 @@ import puppeteer from 'puppeteer'
 // import {checkForSecurityCodeEmail} from './mail.js'
 import { WebSocketServer } from 'ws';
 import json from 'body-parser/lib/types/json.js';
-import {waitForEmailAndExtractCode,getExistingInboxes} from './mailslurp.js'
+import {waitForEmailAndExtractCode,getExistingInboxes} from './mailslurp.js';
 import { getCode } from './gettingCode.js';
 import pg from "pg";
-import env from 'dotenv'
+import env from 'dotenv';
+import https from 'https';
+import fs from 'fs';
+
 
 env.config();
 // Connect to the PostgreSQL server
@@ -32,26 +35,37 @@ db.connect()
 
 
 
+
 let wsocket = null;
 
 export function setupWebSocketServer() {
-    const wss = new WebSocketServer({ port: 8080 });
+
+    // SSL Secure Server For Websocket
+    const privateKey = fs.readFileSync('../../../SSL/devgadbadr.com_key.txt','utf-8');
+    const certificate = fs.readFileSync('../../../SSL/devgadbadr.com.crt','utf-8');
+    const ca = fs.readFileSync('../../../SSL/devgadbadr.com.ca-bundle','utf-8');
+    const credentails = {key:privateKey,cert:certificate,ca:ca};
+    const httpsServer = https.createServer(credentails);
+
+    const wss = new WebSocketServer({ server:httpsServer });
 
     wss.on('connection', ws => {
        
         wsocket = ws;
         ws.on('close', () => {
-           
+           console.log('Websocket at 9090 Closed')
         });
     });
 
-    console.log('WebSocket server is on Port 8080');
-};
+    httpsServer.listen(9090, () => {
+        console.log('WebSocket server is running securely on port 9090');
+    });
 
+};
 
 export async function activateEmail(email,password,index) {
 
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({ headless: true ,args: ['--no-sandbox']});
     const page = await browser.newPage();
 
     wsocket.send(JSON.stringify(['Activation Started',5,email]));
@@ -245,9 +259,9 @@ export async function activateEmail(email,password,index) {
 
             // Case Hidden Part
             if(text.includes('hidden part')){
-
+                
             };
-            return
+            return `${email},${text}`
 
             // 
     

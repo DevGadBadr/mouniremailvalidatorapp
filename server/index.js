@@ -9,6 +9,8 @@ import {setupWebSocketServer} from './automationScript.js'
 import { createServer } from 'http';
 import fs from 'fs';
 import { getCode } from "./gettingCode.js";
+import https from'https';
+import http from'http';
 
 env.config();
 
@@ -18,6 +20,18 @@ app.use(bodyParser.json());
 app.use(express.static('../client'));
 app.use(express.static("public"));
 const port = 3000;
+
+// SSL Part
+const privateKey = fs.readFileSync('../../../SSL/devgadbadr.com_key.txt','utf-8');
+const certificate = fs.readFileSync('../../../SSL/devgadbadr.com.crt','utf-8');
+const ca = fs.readFileSync('../../../SSL/devgadbadr.com.ca-bundle','utf-8');
+const credentails = {key:privateKey,cert:certificate,ca:ca};
+const httpsServer = https.createServer(credentails,app);
+const httpApp = express();
+httpApp.use((req,res)=>{
+    res.redirect(`https://${req.hostname}${req.url}`);
+})
+
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -39,6 +53,10 @@ app.post('/upload', upload.single('file'), (req, res) => {
 });
 
 app.get('/',(req,res) => {
+  res.redirect('/validatorapp/home');
+});
+
+app.get('/home',(req,res) => {
     res.render('index.ejs');
   });
 
@@ -132,4 +150,4 @@ app.post('/getCode',async (req,res)=>{
 
 setupWebSocketServer();
 
-app.listen(port,()=>{console.log('App Started On Port ' + port)});
+httpsServer.listen(port,()=>{console.log('App Started On Port ' + port)});

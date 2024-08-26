@@ -19,7 +19,7 @@ uploadButton.addEventListener('click',()=>{
              const formData = new FormData();
              formData.append('file', file);
 
-             fetch('/upload', {
+             fetch('/validatorapp/upload', {
                  method: 'POST',
                  body: formData,
              })
@@ -33,7 +33,7 @@ uploadButton.addEventListener('click',()=>{
                     startButton.classList.remove('hidden');
                     getCodeButton.classList.remove('hidden');
 
-                    fetch('/resetCount')
+                    fetch('/validatorapp/resetCount')
                     .then(response=> response.json())
                     .then(data=>{
 
@@ -124,10 +124,10 @@ function findTargetElement(parentClass, targetClass, text, siblingClass) {
 };
 
 // Web Socket For Progress
-const socket = new WebSocket('ws://127.0.0.1:8080');
+const socket = new WebSocket('wss://devgadbadr.com:9090');
 
 socket.onopen = () => {
-    console.log('Connected to WebSocket server on port 8080');
+    console.log('Connected to WebSocket server on port 9090');
 };
 
 socket.onmessage = (event) => {
@@ -194,7 +194,7 @@ startButton.addEventListener('click', async ()=>{
                     index:i
                 };
                 try {
-                    const response = await fetch('http://127.0.0.1:3000/activate', {
+                    const response = await fetch('/validatorapp/activate', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(data)
@@ -242,7 +242,7 @@ async function updateCount(value){
     .then(response => response.json())
     .then(data=>{
         var newValue = data.doneCount + value
-        fetch('/updateCount',{method:'POST',headers: {'Content-Type': 'application/json'},body:JSON.stringify({value:newValue})})
+        fetch('/validatorapp/updateCount',{method:'POST',headers: {'Content-Type': 'application/json'},body:JSON.stringify({value:newValue})})
         .then(response=> response.json() )
         .then(data=>{
             // console.log('Count Increased By '+ value + ' ' + data.message)
@@ -274,7 +274,7 @@ getCodeButton.addEventListener('click', async ()=>{
                 const targetTextbox = findTargetElement('emailnode', 'emailname', email, 'textbox');
                 targetTextbox.innerText = "Getting Code...";
                 try {
-                    const response = await fetch('http://127.0.0.1:3000/getCode', {
+                    const response = await fetch('/validatorapp/getCode', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(data)
