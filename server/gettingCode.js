@@ -101,3 +101,33 @@ export async function getCode(username, password) {
         imap.connect();
     });
 };
+
+
+export async function codeFromPupy(page,email,password) {
+    try {
+        // Look in Inbox
+        await page.locator('div ::-p-text(Verify your new Amazon account)').click({ timeout: 5000 });
+        const element  = await page.waitForSelector('.x_otp');
+        const code = await page.evaluate(element => element.textContent, element);
+        return code
+        
+    } catch (error) {
+        // Look in Junk
+        try {
+                
+            const element = await page.waitForSelector('::-p-xpath(//*[@id="TopBar"]/div[1]/button/span/i/span/i)');
+            await element.click()
+            await page.locator('div ::-p-text(Junk Email)').click();
+            await page.locator('div ::-p-text(Verify your new Amazon account)').click({ timeout: 5000 });
+            const element2  = await page.waitForSelector('.x_otp');
+            const code = await page.evaluate(element => element.textContent, element2);
+            return code
+            
+        } catch (err) {
+            return "Code Not Sent"
+            
+        }
+
+    }
+    
+};

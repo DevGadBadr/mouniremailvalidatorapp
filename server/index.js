@@ -68,7 +68,6 @@ app.post('/activate',async (req,res)=>{
   var emailIndex = req.body.index
   var successEmail = await activateEmail(email,password,emailIndex);
   res.send(successEmail);
-  // res.sendStatus(204);
   
 });
 

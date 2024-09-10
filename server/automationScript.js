@@ -70,7 +70,7 @@ export async function activateEmail(email,password,index) {
 
     wsocket.send(JSON.stringify(['Activation Started',5,email]));
 
-    // try {
+    try {
 
         const outlookurl = 'https://login.microsoftonline.com/common/oauth2/authorize?client_id=00000002-0000-0ff1-ce00-000000000000&redirect_uri=https%3a%2f%2foutlook.office.com%2fowa%2f&resource=00000002-0000-0ff1-ce00-000000000000&response_mode=form_post&response_type=code+id_token&scope=openid&nonce=638588142621943172.33eb34ef-58b5-4156-a19a-635d3c254ead&msaredir=1&client-request-id=d489c4ae-b3c3-c5a0-dbbf-f49e03091477&protectedtoken=true&claims=%7b%22id_token%22%3a%7b%22xms_cc%22%3a%7b%22values%22%3a%5b%22CP1%22%5d%7d%7d%7d&prompt=select_account&state=DYu7DoIwAACL_gtbhT5pB-JgYhhwURMNi-nLREItKRXj39vhbrlcAQDYZjaZos4CDSeCCYEo5hhJSlCDd4Q4Tah7QiY0gxQxDhWSCnLCLDGYUadskd-hCl9V7ecY_JzaxU3OpIcyJnzeqVySSq5FZXT2FXO4hlZ159p0J97_5Grv50VjGXsv_eCncbiwUeN61bfjrA_iDw';
         await page.goto(outlookurl, { waitUntil: 'load' ,timeout:120000});
@@ -108,6 +108,17 @@ export async function activateEmail(email,password,index) {
     
         // Case Email Needs activation
         if(page.url().includes('proofs')){
+
+            try {
+                
+                await page.waitForSelector('#iShowSkip');
+                await page.click('#iShowSkip');
+                accountReady(page,email,password);
+
+            } catch (error) {
+                console.log("No skip error is "+error);
+
+            }
 
             var currentInboxes = await getExistingInboxes();
 
@@ -183,64 +194,9 @@ export async function activateEmail(email,password,index) {
         // Case Email is Ready
         } else if(page.url().includes('ppsecure')){
     
-            // Click Yes
-            await page.waitForSelector('#acceptButton');
-            await page.click('#acceptButton');
-    
-            wsocket.send(JSON.stringify(['Account is Activated',80,email]));
-    
-            await page.waitForNavigation({ waitUntil: 'load' });
-    
-            await page.waitForSelector('span[class="flexContainer-158"]');
-
-            wsocket.send(JSON.stringify(['Account is Ready',90,email]))
         
-            if(page.url().includes('outlook.live.com/mail/0/')){
-
-                try{
-
-                    const frame = await page.waitForSelector('::-p-xpath(//*[@id="unified_consent_dialog_frame"])');
-                    const frameContent = await frame.contentFrame();
-                    const divHandle = await frameContent.waitForSelector('::-p-xpath(//*[@id="contentContainer"]/div[2])');
-
-
-                    if (divHandle) {
-                        console.log('Div element found!');
-                        
-                        const divSelector = '#ParentContentContainer';
-                        await frameContent.waitForSelector(divSelector);
-                        await frameContent.evaluate(() => {
-                            const div = document.getElementById('ParentContentContainer');
-                            div.scrollTop = div.scrollHeight;
-                        });
-                        
-                        // Click Ok
-                        await frameContent.waitForSelector('#unified-consent-continue-button');
-                        await frameContent.waitForFunction(selector => {
-                            const button = document.querySelector(selector);
-                            return button && !button.disabled;
-                        }, {}, '#unified-consent-continue-button');
-                        await frameContent.click('#unified-consent-continue-button');
-
-                    } else {
-                        console.log('Div element not found!');
-                    }
-                } catch(err){
-                    console.log('Consent didn"t Show: ' + err)
-                }
-
-                
-                try {
-                    const code = await getCode(email, password);
-                    console.log(code); // Logs the code
-                    return `${email},${code}`;
-                } catch (error) {
-                    console.error('Error:', error);
-                }
-                // await browser.close();
-                
-            }
-            
+            var code = await emailReady(page,email,password);
+            return code
     
         // Case Email needs code from existing email
         } else if(page.url().includes('identity/confirm')){
@@ -302,18 +258,46 @@ export async function activateEmail(email,password,index) {
                 return `${email}`;
             }}
         
-    // } catch (error) {
+    } catch (error) {
 
-    //     // console.log('error')
-    //     try{
-    //         const date = new Date();
-    //         var filename = 'error-' + date + '.jpg';
-    //         await page.screenshot({ path: filename, fullPage: true });
-    //     } catch(err){
-    //         // console.log(err)
-    //     }
+        // console.log('error')
+        try{
+            const date = new Date();
+            var filename = 'error-' + date + '.jpg';
+            await page.screenshot({ path: filename, fullPage: true });
+        } catch(err){
+            // console.log(err)
+        }
 
-    //     wsocket.send(JSON.stringify(['Error',0,email]))
-    //     return 'Error';
-    // }
+        wsocket.send(JSON.stringify(['Error',0,email]))
+        return 'Error';
+    }
+};
+
+async function emailReady(page,email,password){
+    // Click Yes
+    await page.waitForSelector('#acceptButton');
+    await page.click('#acceptButton');
+
+    wsocket.send(JSON.stringify(['Account is Activated',80,email]));
+
+    await page.waitForNavigation({ waitUntil: 'load' });
+
+    await page.waitForSelector('span[class="flexContainer-158"]');
+
+    wsocket.send(JSON.stringify(['Account is Ready',90,email]))
+
+    if(page.url().includes('outlook.live.com/mail/0/')){
+   
+        try {
+            var mycode = await codeFromPupy(page,email,password)
+            return `${email},${mycode}`;
+        } catch (error) {
+            console.error('Error:', error);
+            const code = undefined
+            return `${email},${code}`;
+        }
+        // await browser.close();
+        
+    }
 };
